@@ -4,17 +4,50 @@ class DeepNeuralNetwork(NeuralNetwork):
     """
     This class is a deep neural network
     """
-    def __init__(self):
+    def __init__(self, nn_input_dim, nn_hidden_dims, nn_output_dim, actFun_type='tanh', reg_lambda=0.01, seed=0):
+        """
+        Constructs a deep neural network
+        :param nn_input_dim: input dimension
+        :param nn_output_dim: output dimension
+        :param nn_hidden_dims: an array of length equal to the # of layers, values equal to # of neuron
+        :param actFun_type: type of activation function to be used
+        :param reg_lambda: regularization parameter
+        :param seed: seed of the rng
+        """
 
+        self.nn_input_dim = nn_input_dim
+        self.nn_output_dim = nn_output_dim
+        self.nn_hidden_dims = nn_hidden_dims
+        self.actFun_type = actFun_type
+        self.reg_lambda = reg_lambda
+        self.n_layers = len(nn_hidden_dims)
 
-    def feedforward(self, X, actFun):
+        # Initialize the network
+        np.random.seed(seed)
+        self.hidden_layers = []
+        prev_dim = nn_input_dim
+        for n in nn_hidden_dims:
+            l = Layer(n, prev_dim, self.actFun_type, seed)
+            self.hidden_layers.append(l)
+            prev_dim = n
 
+    def feedforward(self, X):
+        """
+        Given an input, calculates the output of the network
+        :param X: the input
+        :return: none, modifies self.probs
+        """
+        activation_function =  lambda x: self.actFun(x, type=self.actFun_type)
+        self.hidden_layers[0].feedforward(X, activation_function)
+        # do the rest of the layers
+        # do the output layer
+        return None
     def backprop(self, X, y):
-
+        return None
     def calculate_loss(self, X, y):
-
+        return None
     def fit_model(self, X, y, epsilon=0.01, num_passes=20000, print_loss=True):
-
+        return None
 
 class Layer(object):
     """
@@ -25,6 +58,7 @@ class Layer(object):
         :param nn_dim: number of hidden neurons
         :param nn_prev_dim: number of hidden neurons in the previous layer
         :param actFun_type: type of activation function to be used
+        :param seed: value for the random seed during initialization
         """
         self.nn_dim = nn_dim
         self.nn_prev_dim = nn_prev_dim
@@ -61,11 +95,11 @@ class Layer(object):
 def main():
     # generate and visualize Make-Moons dataset
     X, y = generate_data()
-    plt.scatter(X[:, 0], X[:, 1], s=40, c=y, cmap=plt.cm.Spectral)
-    plt.show()
+    # plt.scatter(X[:, 0], X[:, 1], s=40, c=y, cmap=plt.cm.Spectral)
+    # plt.show()
 
-    # model = NeuralNetwork(nn_input_dim=2, nn_hidden_dim=50, nn_output_dim=2, actFun_type='relu')
-    # model.fit_model(X,y)
+    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[3, 2], nn_output_dim=2, actFun_type='relu')
+    print model.hidden_layers[1].W
     # model.visualize_decision_boundary(X,y)
 
 if __name__ == "__main__":
