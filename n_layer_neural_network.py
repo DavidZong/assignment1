@@ -105,15 +105,19 @@ class DeepNeuralNetwork(NeuralNetwork):
             # Backprop
             dW, db = self.backprop(X, y)
 
+            # Apply Regularization to weights
+            dW[-1] += self.reg_lambda * self.oW
+            for l in range(0, self.n_layers):
+                layer = self.hidden_layers[l]
+                dW[l] += self.reg_lambda * layer.W
 
-            # Apply Regularization
 
             # Update
             layer_mod = 1.0 / self.n_layers
             # output layer
             self.oW += -epsilon * layer_mod * dW[-1]
             self.ob += -epsilon * layer_mod * db[-1]
-
+            # hidden layer(s)
             for l in range(0, self.n_layers):
                 layer = self.hidden_layers[l]
                 layer.W += -epsilon * layer_mod * dW[l]
@@ -170,8 +174,7 @@ def main():
     # plt.scatter(X[:, 0], X[:, 1], s=40, c=y, cmap=plt.cm.Spectral)
     # plt.show()
 
-
-    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[10,10,10], nn_output_dim=2, actFun_type='relu')
+    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[3,3,3], nn_output_dim=2, actFun_type='relu')
     # activation_function = lambda x: model.actFun(x, type=model.actFun_type)
     # model.feedforward(X, activation_function)
     model.fit_model(X, y)
