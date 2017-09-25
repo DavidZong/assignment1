@@ -93,8 +93,23 @@ class DeepNeuralNetwork(NeuralNetwork):
         return dW, db
 
     def calculate_loss(self, X, y):
-        loss = 1
-        return loss
+        '''
+        calculate_loss computes the loss for prediction
+        :param X: input data
+        :param y: given labels
+        :return: the loss for prediction
+        '''
+        num_examples = len(X)
+        self.feedforward(X, lambda x: self.actFun(x, type=self.actFun_type))
+        # Calculating the loss
+
+        data_loss = np.sum(np.dot(y, np.log(self.probs)))
+        # Add regulatization term to loss (optional)
+        sum_square_W = np.sum(np.square(self.oW))
+        for l in self.hidden_layers:
+            sum_square_W += np.sum(np.square(l.W))
+        data_loss += self.reg_lambda / 2 * sum_square_W
+        return (1. / num_examples) * data_loss
 
     def fit_model(self, X, y, epsilon=0.01, num_passes=20000, print_loss=True):
         for i in range(0, num_passes):
@@ -110,7 +125,6 @@ class DeepNeuralNetwork(NeuralNetwork):
             for l in range(0, self.n_layers):
                 layer = self.hidden_layers[l]
                 dW[l] += self.reg_lambda * layer.W
-
 
             # Update
             layer_mod = 1.0 / self.n_layers
