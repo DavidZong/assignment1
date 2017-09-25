@@ -24,48 +24,119 @@ class DeepNeuralNetwork(NeuralNetwork):
 
         # Initialize the network
         np.random.seed(seed)
+
+        # Make the hidden layers
         self.hidden_layers = []
         prev_dim = nn_input_dim
         for n in nn_hidden_dims:
-            l = Layer(n, prev_dim, self.actFun_type, seed)
+            l = Layer(n, prev_dim, self.actFun_type)
             self.hidden_layers.append(l)
             prev_dim = n
 
-    def feedforward(self, X):
+        # Make the output layer
+        self.oW = np.random.randn(self.nn_hidden_dims[-1], self.nn_output_dim) / np.sqrt(self.nn_hidden_dims[-1])
+        self.ob = np.zeros((1, self.nn_output_dim))
+    def feedforward(self, X, activation_function):
         """
         Given an input, calculates the output of the network
         :param X: the input
         :return: none, modifies self.probs
         """
-        activation_function =  lambda x: self.actFun(x, type=self.actFun_type)
-        self.hidden_layers[0].feedforward(X, activation_function)
-        # do the rest of the layers
+        # activation_function =  lambda x: self.actFun(x, type=self.actFun_type)
+        last_a = X
+        for layer in self.hidden_layers:
+            layer.feedforward(last_a, activation_function)
+            last_a = layer.a
+
         # do the output layer
+        zout = np.dot(last_a, self.oW) + self.ob
+        exp_scores = np.exp(zout)
+        self.probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
         return None
+
     def backprop(self, X, y):
-        return None
+        """
+        Performs backpropagation on the network, finding all the dW and db
+        :param X: input data
+        :param y: labels
+        :return: dW and db are arrays of np arrays that are the changes
+        """
+        num_examples = len(X)
+        delta_last = self.probs
+        delta_last[range(num_examples), y] -= 1
+        diff_actFun = lambda x: self.diff_actFun(x, type=self.actFun_type)
+
+        # backprop the output layer
+        a = self.hidden_layers[-1].a
+        z = self.hidden_layers[-1].z
+        odb = np.sum(delta_last, axis=0)
+        odW = np.dot(a.transpose(), delta_last)
+        delta_output = diff_actFun(z) * np.dot(delta_last, self.oW.transpose())
+        dW = [odW]
+        db = [odb]
+
+        # backprop the hidden layer(s)
+        delta_next = delta_output
+        l = self.n_layers - 1
+        while l >= 0:
+            if l == 0:
+                a = X
+                z = X # this isn't needed on the 1st layer, but is here since it has the correct dimensions
+            else:
+                a = self.hidden_layers[l-1].a
+                z = self.hidden_layers[l-1].z
+            layer_dW, layer_db = self.hidden_layers[l].backprop(a, z, delta_next, diff_actFun)
+            delta_next = self.hidden_layers[l].delta
+            dW.insert(0, layer_dW)
+            db.insert(0, layer_db)
+            l -= 1
+        return dW, db
+
     def calculate_loss(self, X, y):
-        return None
+        loss = 1
+        return loss
+
     def fit_model(self, X, y, epsilon=0.01, num_passes=20000, print_loss=True):
+        for i in range(0, num_passes):
+            # Feedforward
+            activation_function = lambda x: self.actFun(x, type=self.actFun_type)
+            self.feedforward(X, activation_function)
+
+            # Backprop
+            dW, db = self.backprop(X, y)
+
+
+            # Apply Regularization
+
+            # Update
+            # output layer
+            self.oW += -epsilon*dW[-1]
+            self.ob += -epsilon*db[-1]
+
+            for l in range(0, self.n_layers):
+                layer = self.hidden_layers[l]
+                layer.W += -epsilon * dW[l]
+                layer.b += -epsilon * db[l]
+
+            if print_loss and i % 1000 == 0:
+                print("Loss after iteration %i: %f" % (i, self.calculate_loss(X, y)))
         return None
 
 class Layer(object):
     """
     This is one hidden layer in the n-layer network
     """
-    def __init__(self, nn_dim, nn_prev_dim, actFun_type='tanh', seed=0):
+    def __init__(self, nn_dim, nn_prev_dim, actFun_type='tanh'):
         """
         :param nn_dim: number of hidden neurons
         :param nn_prev_dim: number of hidden neurons in the previous layer
         :param actFun_type: type of activation function to be used
-        :param seed: value for the random seed during initialization
         """
         self.nn_dim = nn_dim
         self.nn_prev_dim = nn_prev_dim
         self.actFun_type = actFun_type
 
         # Initialize weight and bias
-        np.random.seed(seed)
         self.W = np.random.randn(self.nn_prev_dim, self.nn_dim) / np.sqrt(self.nn_prev_dim)
         self.b = np.zeros((1, self.nn_dim))
 
@@ -75,7 +146,7 @@ class Layer(object):
         :param actFun: the activation function passed as an anonymous function
         :return: None
         """
-        self.z = a * self.W + self.b
+        self.z = np.dot(a, self.W) + self.b
         self.a = actFun(self.z)
         return None
 
@@ -89,7 +160,7 @@ class Layer(object):
         """
         self.delta = diff_actFun(z) * np.dot(delta_next, self.W.transpose())
         self.db = np.sum(delta_next, axis=0)
-        self.dW = np.dot(self.a.transpose(), delta_next)
+        self.dW = np.dot(a.transpose(), delta_next)
         return self.dW, self.db
 
 def main():
@@ -98,9 +169,14 @@ def main():
     # plt.scatter(X[:, 0], X[:, 1], s=40, c=y, cmap=plt.cm.Spectral)
     # plt.show()
 
-    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[3, 2], nn_output_dim=2, actFun_type='relu')
-    print model.hidden_layers[1].W
-    # model.visualize_decision_boundary(X,y)
+
+    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[3,3,3], nn_output_dim=2, actFun_type='relu')
+    # activation_function = lambda x: model.actFun(x, type=model.actFun_type)
+    # model.feedforward(X, activation_function)
+    model.fit_model(X, y)
+    model.visualize_decision_boundary(X, y)
+    print model.probs
+
 
 if __name__ == "__main__":
     main()
