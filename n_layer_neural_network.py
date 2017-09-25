@@ -109,14 +109,15 @@ class DeepNeuralNetwork(NeuralNetwork):
             # Apply Regularization
 
             # Update
+            layer_mod = 1.0 / self.n_layers
             # output layer
-            self.oW += -epsilon*dW[-1]
-            self.ob += -epsilon*db[-1]
+            self.oW += -epsilon * layer_mod * dW[-1]
+            self.ob += -epsilon * layer_mod * db[-1]
 
             for l in range(0, self.n_layers):
                 layer = self.hidden_layers[l]
-                layer.W += -epsilon * dW[l]
-                layer.b += -epsilon * db[l]
+                layer.W += -epsilon * layer_mod * dW[l]
+                layer.b += -epsilon * layer_mod * db[l]
 
             if print_loss and i % 1000 == 0:
                 print("Loss after iteration %i: %f" % (i, self.calculate_loss(X, y)))
@@ -170,7 +171,7 @@ def main():
     # plt.show()
 
 
-    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[3,3,3], nn_output_dim=2, actFun_type='relu')
+    model = DeepNeuralNetwork(nn_input_dim=2, nn_hidden_dims=[10,10,10], nn_output_dim=2, actFun_type='relu')
     # activation_function = lambda x: model.actFun(x, type=model.actFun_type)
     # model.feedforward(X, activation_function)
     model.fit_model(X, y)
