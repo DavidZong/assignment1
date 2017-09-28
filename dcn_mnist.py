@@ -69,9 +69,22 @@ def max_pool_2x2(x):
 
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
+def variable_summaries(var):
+  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+  with tf.name_scope('summaries'):
+    mean = tf.reduce_mean(var)
+    tf.summary.scalar('mean', mean)
+    with tf.name_scope('stddev'):
+      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+    tf.summary.scalar('stddev', stddev)
+    tf.summary.scalar('max', tf.reduce_max(var))
+    tf.summary.scalar('min', tf.reduce_min(var))
+    tf.summary.histogram('histogram', var)
+
+
 def main():
     # Specify training parameters
-    result_dir = './results/' # directory where the results from the training are saved
+    result_dir = './results/test' # directory where the results from the training are saved
     max_step = 5500 # the maximum iterations. After max_step iterations, the training will stop no matter what
 
     start_time = time.time() # start timing
@@ -86,16 +99,40 @@ def main():
     x_image = tf.reshape(x, [-1, 28, 28, 1])
 
     # first convolutional layer
-    W_conv1 = weight_variable([5, 5, 1, 32])
-    b_conv1 = bias_variable([32])
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
-    h_pool1 = max_pool_2x2(h_conv1)
+    with tf.name_scope('conv1'):
+        with tf.name_scope('weight'):
+            W_conv1 = weight_variable([5, 5, 1, 32])
+            variable_summaries(W_conv1)
+        with tf.name_scope('bias'):
+            b_conv1 = bias_variable([32])
+            variable_summaries(b_conv1)
+        with tf.name_scope('net_input'):
+            z_conv1 = conv2d(x_image, W_conv1) + b_conv1
+            variable_summaries(z_conv1)
+        with tf.name_scope('activation'):
+            h_conv1 = tf.nn.relu(z_conv1)
+            variable_summaries(h_conv1)
+        with tf.name_scope('max_pool'):
+            h_pool1 = max_pool_2x2(h_conv1)
+            variable_summaries(h_pool1)
 
     # second convolutional layer
-    W_conv2 = weight_variable([5, 5, 32, 64])
-    b_conv2 = bias_variable([64])
-    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-    h_pool2 = max_pool_2x2(h_conv2)
+    with tf.name_scope('conv2'):
+        with tf.name_scope('weight'):
+            W_conv2 = weight_variable([5, 5, 32, 64])
+            variable_summaries(W_conv2)
+        with tf.name_scope('bias'):
+            b_conv2 = bias_variable([64])
+            variable_summaries(b_conv2)
+        with tf.name_scope('net_input'):
+            z_conv2 = conv2d(h_pool1, W_conv2) + b_conv2
+            variable_summaries(z_conv2)
+        with tf.name_scope('activation'):
+            h_conv2 = tf.nn.relu(z_conv2)
+            variable_summaries(h_conv2)
+        with tf.name_scope('max_pool'):
+            h_pool2 = max_pool_2x2(h_conv2)
+            variable_summaries(h_pool2)
 
     # densely connected layer
     W_fc1 = weight_variable([7 * 7 * 64, 1024])
